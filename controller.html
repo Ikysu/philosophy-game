@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controller</title>
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <script src="joy.min.js"></script>
+    <style>
+
+        body {
+            color:white;
+            overflow: hidden;
+            margin: 0;
+            display: flex;
+            height: 90vh;
+            align-items: center;
+            justify-content: space-between;
+            flex-direction: column;
+            background-image: url("k.png");
+            background-repeat: repeat;
+        }
+
+        #joy {
+            bottom: 0;
+            position: fixed;
+        }
+
+        #text {
+            display: flex;
+            flex-direction: column;
+            width: 80vw;
+            align-items: center;
+            height:40vh;
+            justify-content: space-between;
+            padding-top: 1em;
+        }
+
+        #dyno {
+            image-rendering: pixelated;
+            height:128px;
+            width:128px;            
+        }
+
+        #reset {
+            position: absolute;
+            top:0;
+            right:0
+        }
+    </style>
+</head>
+<body>
+    <button id="reset" onclick="reset()">X</button>
+    <div id="text">
+        <img id="dyno" src="/pirate.gif" >
+        <div id="quest"></div>
+        <div id="button">Ща погодь!</div>
+    </div>
+    <div id="joy"></div>
+
+    <script>
+        let quest=document.getElementById("quest");
+
+        //На какой кнопочке стоим
+        let button = document.getElementById("button"),
+            btnColors = {
+                red:"красную",
+                green:"зеленую",
+                yellow:"желтую",
+                blue:"синюю"
+            };
+        
+        //Убираем джойстик вниз
+        let joystick = document.getElementById("joy")
+        joystick.style.width=window.innerWidth+"px";
+        joystick.style.height=window.innerWidth+"px";
+
+        //Проверяем id хоста
+        if(!window.location.hash) window.location.replace("./")
+        const id = window.location.hash.slice(1)
+
+        // Запрашиваем ник
+        let nickname = localStorage.getItem("nickname") || prompt("Nickname:") || Math.random().toString(16).substr(2, 8)
+        localStorage.setItem("nickname", nickname)
+        
+        //Пол
+        let sex = localStorage.getItem("sex") || (confirm("Конфетку будешь?")?"female":"male");
+        localStorage.setItem("sex", sex)
+
+        // Работаем с пиром
+        var peer = new Peer({
+            host:"peer.iky.su"
+        })
+        peer.on("open", (myid)=>{
+            var conn = peer.connect(id)
+            
+            conn.on('open', function(){
+                conn.send({event:"setnickname",data:{nickname, sex}});
+
+                button.innerHTML=`Вы не вырбали ответ!`
+
+                let move = {x:0,y:0},
+                    onMove = false;
+                var Joy = new JoyStick('joy', {}, ({x,y})=>{
+                    move={x:(+x)/100,y:(+y)/100};
+                    onMove = true
+                });
+                setInterval(()=>{
+                    conn.send({event:"heartbeat",data:{ok:true}});
+                },1000)
+                setInterval(()=>{
+                    if(move.x==0&&move.y==0){
+                        if(onMove){
+                            onMove=false
+                            conn.send({event:"move",data:move});
+                        }
+                    }else{
+                        conn.send({event:"move",data:move});
+                    }
+                }, 16)
+            });
+            conn.on("data", ({data, event})=>{
+                switch (event) {
+                    case "button":
+                        if(data.color==-1){
+                            button.innerHTML=`Вы не вырбали ответ!`
+                        }else{
+                            button.innerHTML=`Вы выбрали <span style="color: ${data.color}">${btnColors[data.color]}</span> кнопку!`
+                        }
+                        break;
+
+                    case "question":
+                        quest.innerText=data.text;
+                        console.log("Q:"+data.text)
+
+                        break;
+
+                    case "dyno":
+                        document.getElementById("dyno").src = data.image
+                        break;
+                
+                    default:
+                        console.log(`UNKNOWN EVENT ${event}`)
+                        console.log(data)
+                        break;
+                }
+            })
+            conn.on('close', ()=>{
+                window.location.reload()
+            })
+        })
+
+        function reset() {
+            localStorage.removeItem('nickname')
+            localStorage.removeItem("sex")
+            window.location.reload()
+        }
+        
+        
+
+    </script>
+</body>
+</html>
