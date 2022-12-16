@@ -30,7 +30,7 @@
         #text {
             display: flex;
             flex-direction: column;
-            width: 80vw;
+            width: 90vw;
             align-items: center;
             height:40vh;
             justify-content: space-between;
@@ -66,7 +66,7 @@
 
     <script>
         let quest=document.getElementById("quest"),
-            qColors = ['🟥', '🟦', '🟩', '🟨'];
+            qColors = ['🟥', '🟦', '🟩', '🟨']
 
         //На какой кнопочке стоим
         let button = document.getElementById("button"),
@@ -137,8 +137,7 @@
                         break;
 
                     case "question":
-                        quest.innerText=data.question+"\n\n"+data.options.map((text, index)=>`${qColors[index]} ${text}`).join("\n");
-                        console.log(data)
+                        quest.innerText=data.question+"\n\n"+data.options.map((text, index)=>`${qColors[index]} ${text}`).join("\n")+`\n{${data?.answer?.join(", ")??"NULL"}}`;
 
                         break;
 
@@ -153,9 +152,12 @@
                 }
             })
             conn.on('close', ()=>{
-                button.innerText="Увы, но ты проиграл!";
+                button.innerText="Ты как умудрился проиграть!?";
                 quest.innerText="";
                 joystick.remove()
+                setTimeout(()=>{
+                    window.location.reload()
+                },1000)
             })
         })
 
